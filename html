@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Four</title>
+    <style>
+        /* Style for the game board */
+        #board {
+            display: grid;
+            grid-template-columns: repeat(7, 50px);
+            grid-template-rows: repeat(6, 50px);
+            gap: 5px;
+        }
+
+        /* Style for individual cells */
+        .cell {
+            width: 50px;
+            height: 50px;
+            background-color: #fff;
+            border: 2px solid #000;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        /* Style for player disc colors */
+        .cell::before {
+            content: '';
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .cell[data-col="0"]::before {
+            background-color: #f00; /* Red disc */
+        }
+
+        .cell[data-col="1"]::before {
+            background-color: #ff0; /* Yellow disc */
+        }
+    </style>
+</head>
+<body>
+    <h1>Connect Four</h1>
+    <div id="board"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.1/socket.io.js"></script>
+    <script>
+        const socket = io('http://localhost:5050');
+
+        let current_player;
+        let game_over = false;
+
+        function createBoard() {
+            const boardDiv = document.getElementById('board');
+            boardDiv.innerHTML = '';
+            for (let i = 0; i < 6; i++) {
+                const row = document.createElement('div');
+                row.className = 'row';
+                for (let j = 0; j < 7; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.setAttribute('data-col', j);
+                    cell.setAttribute('onclick', 'dropDisc(this)');
+                    row.appendChild(cell);
+                }
+                boardDiv.appendChild(row);
+            }
+        }
+
+        function updateBoard(data) {
+            const board = JSON.parse(data.board);
+            for (let i = 0; i < 6; i++) {
+                for (let j = 0; j < 7; j++) {
+                    const cell = document.querySelector(`.row:nth-child(${i + 1}) .cell:nth-child(${j + 1})`);
+                    cell.textContent = board[i][j];
+                }
+            }
+            if (data.current_player) {
+                current_player = data.current_player;
+            }
+            if (data.winner) {
+                game_over = true;
+                alert(`${data.winner} wins!`);
+            }
+        }
+
+        function dropDisc(cell) {
+            if (!game_over && cell.textContent === '') {
+                const col = parseInt(cell.getAttribute('data-col'));
+                socket.emit('move', col.toString());
+            }
+        }
+
+        socket.on('connect', () => {
+            createBoard();
+        });
+
+        socket.on('message', (data) => {
+            updateBoard(data);
+        });
+    </script>
+</body>
+</html>
