@@ -5,7 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connect Four</title>
     <style>
-        /* Add your CSS styles here */
+        /* Style for the game board */
+        #board {
+            display: grid;
+            grid-template-columns: repeat(7, 50px);
+            grid-template-rows: repeat(6, 50px);
+            gap: 5px;
+        }
+
+        /* Style for individual cells */
+        .cell {
+            width: 50px;
+            height: 50px;
+            background-color: #fff;
+            border: 2px solid #000;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        /* Style for player disc colors */
+        .cell::before {
+            content: '';
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .cell[data-col="0"]::before {
+            background-color: #f00; /* Red disc */
+        }
+
+        .cell[data-col="1"]::before {
+            background-color: #ff0; /* Yellow disc */
+        }
     </style>
 </head>
 <body>
