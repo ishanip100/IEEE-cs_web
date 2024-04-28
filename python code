@@ -1,0 +1,112 @@
+import socket
+import json
+import threading
+
+# Global variables
+HOST = '127.0.0.1'
+PORT = 5050
+ADDR = (HOST, PORT)
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.bind(ADDR)
+
+# Game state
+board = [[' ' for _ in range(7)] for _ in range(6)]
+current_player = 'R'  # Red starts
+game_over = False
+
+# Function to broadcast message to all clients
+def broadcast(msg):
+    for client in clients:
+        client.send(msg)
+
+# Function to handle client connections
+def handle_client(conn):
+    global current_player, game_over
+    while True:
+        try:
+            data = conn.recv(1024).decode()
+            if not data:
+                break
+            if data == "reset":
+                reset_game()
+                broadcast(json.dumps({"board": board}))
+                continue
+            col = int(data)
+            if is_valid_move(col):
+                drop_disc(col)
+                if check_win() or check_draw():
+                    game_over = True
+                    broadcast(json.dumps({"board": board, "winner": current_player}))
+                else:
+                    current_player = 'R' if current_player == 'Y' else 'Y'
+                    broadcast(json.dumps({"board": board, "current_player": current_player}))
+        except Exception as e:
+            print("[ERROR]", e)
+            break
+    conn.close()
+
+# Function to reset the game
+def reset_game():
+    global board, current_player, game_over
+    board = [[' ' for _ in range(7)] for _ in range(6)]
+    current_player = 'R'
+    game_over = False
+
+# Function to check if move is valid
+def is_valid_move(col):
+    return board[0][col] == ' '
+
+# Function to drop a disc in the specified column
+def drop_disc(col):
+    global board
+    for i in range(5, -1, -1):
+        if board[i][col] == ' ':
+            board[i][col] = current_player
+            break
+
+# Function to check if a player has won
+def check_win():
+    # Check rows
+    for i in range(6):
+        for j in range(4):
+            if board[i][j] == board[i][j + 1] == board[i][j + 2] == board[i][j + 3] != ' ':
+                return True
+    # Check columns
+    for j in range(7):
+        for i in range(3):
+            if board[i][j] == board[i + 1][j] == board[i + 2][j] == board[i + 3][j] != ' ':
+                return True
+    # Check diagonals
+    for i in range(3):
+        for j in range(4):
+            if board[i][j] == board[i + 1][j + 1] == board[i + 2][j + 2] == board[i + 3][j + 3] != ' ':
+                return True
+    for i in range(3):
+        for j in range(3, 7):
+            if board[i][j] == board[i + 1][j - 1] == board[i + 2][j - 2] == board[i + 3][j - 3] != ' ':
+                return True
+    return False
+
+# Function to check for a draw
+def check_draw():
+    for i in range(6):
+        for j in range(7):
+            if board[i][j] == ' ':
+                return False
+    return True
+
+# Start server and listen for connections
+def start():
+    global server, clients
+    server.listen()
+    print("Server is listening on", HOST, PORT)
+    while True:
+        conn, addr = server.accept()
+        clients.append(conn)
+        print("Connected to", addr)
+        thread = threading.Thread(target=handle_client, args=(conn,))
+        thread.start()
+
+clients = []
+print("Server is starting...")
+start()
